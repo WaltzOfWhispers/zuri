@@ -15,6 +15,9 @@ const COLLECTOR_ADDRESS = process.env.COLLECTOR_ADDRESS!;
 const NEAR_CONTRACT_ID =
   process.env.NEAR_CONTRACT_ID || "zuripay.testnet";
 const NEAR_ACCOUNT_ID = process.env.NEAR_ACCOUNT_ID || "zuripay.testnet";
+const NEAR_PRIVATE_KEY = process.env.NEAR_PRIVATE_KEY;
+const NEAR_NODE_URL =
+  process.env.NEAR_NODE_URL || "https://rpc.testnet.near.org";
 
 async function main() {
   console.log("🚀 Starting ZuriPay backend...");
@@ -36,7 +39,7 @@ async function main() {
   }
 
   console.log("Initializing NEAR client...");
-  initNearClient(NEAR_CONTRACT_ID, NEAR_ACCOUNT_ID);
+  await initNearClient(NEAR_CONTRACT_ID, NEAR_ACCOUNT_ID, NEAR_PRIVATE_KEY, NEAR_NODE_URL);
   console.log(`✓ NEAR contract: ${NEAR_CONTRACT_ID}`);
 
   // Start worker for payment processing

@@ -5,13 +5,17 @@
  * where solvers can discover and fulfill them.
  */
 
+import { connect, keyStores, KeyPair, utils, Near, Account } from "near-api-js";
+import { NearConfig } from "near-api-js/lib/near";
+
 export interface PaymentIntentPayload {
   id: string;
   paymentId: string;
   destChain: string; // e.g., "ethereum-sepolia" or "zcash-testnet"
   destAsset: string; // e.g., "ETH" or "ZEC"
   destAddress: string; // recipient address on destination chain
-  amountWei: string; // amount in wei for ETH (reused here as atomic units)
+  amountAtomic: string; // amount in smallest unit for destAsset
+  decimals: number; // decimal places for destAsset
   zcashBurnTxid: string;
   createdAt: number;
 }
@@ -21,16 +25,54 @@ export interface NearIntentResponse extends PaymentIntentPayload {
   payoutTxHash?: string;
 }
 
-let nearContractId: string;
-let nearAccountId: string;
+type NearClientConfig = {
+  contractId: string;
+  accountId: string;
+  privateKey?: string;
+  networkId: string;
+  nodeUrl: string;
+};
+
+let nearConfig: NearClientConfig;
+let nearConnection: Near | null = null;
+let nearAccount: Account | null = null;
 const intentStore: NearIntentResponse[] = [];
 
 /**
- * Initialize NEAR client
+ * Initialize NEAR client (prefers real connection; falls back to stub store if misconfigured)
  */
-export function initNearClient(contractId: string, accountId: string): void {
-  nearContractId = contractId;
-  nearAccountId = accountId;
+export async function initNearClient(
+  contractId: string,
+  accountId: string,
+  privateKey?: string,
+  nodeUrl: string = "https://rpc.testnet.near.org",
+  networkId: string = "testnet"
+): Promise<void> {
+  nearConfig = { contractId, accountId, privateKey, nodeUrl, networkId };
+
+  if (!privateKey) {
+    console.warn(
+      "[NEAR] NEAR_PRIVATE_KEY not set; using in-memory stub for intents."
+    );
+    return;
+  }
+
+  const keyStore = new keyStores.InMemoryKeyStore();
+  const keyPair = KeyPair.fromString(privateKey);
+  await keyStore.setKey(networkId, accountId, keyPair);
+
+  const config: NearConfig = {
+    headers: {},
+    keyStore,
+    networkId,
+    nodeUrl,
+    walletUrl: "",
+    helperUrl: "",
+  };
+
+  nearConnection = await connect(config);
+  nearAccount = await nearConnection.account(accountId);
+  console.log(`[NEAR] Connected to ${networkId} with account ${accountId}`);
 }
 
 /**
@@ -40,25 +82,45 @@ export function initNearClient(contractId: string, accountId: string): void {
 export async function createNearIntent(
   intent: PaymentIntentPayload
 ): Promise<void> {
-  // TODO: Implement using near-api-js in production.
-  intentStore.push({ ...intent, fulfilled: false });
+  if (!nearAccount || !nearConfig.privateKey) {
+    // Stub fallback
+    intentStore.push({ ...intent, fulfilled: false });
+    console.log(`[STUB] Creating NEAR intent:`, {
+      intentId: intent.id,
+      destChain: intent.destChain,
+      destAddress: intent.destAddress,
+      amountAtomic: intent.amountWei,
+    });
+    return;
+  }
 
-  console.log(`[STUB] Creating NEAR intent:`, {
-    intentId: intent.id,
-    destChain: intent.destChain,
-    destAddress: intent.destAddress,
-    amountAtomic: intent.amountWei,
+  await nearAccount.functionCall({
+    contractId: nearConfig.contractId,
+    methodName: "create_intent",
+    args: intent,
+    gas: new utils.format.Gas("30000000000000"), // 30 Tgas
   });
+
+  console.log(`[NEAR] Intent created on-chain: ${intent.id}`);
 }
 
 /**
  * Fetch all open (unfulfilled) intents from NEAR
  */
 export async function fetchOpenNearIntents(): Promise<PaymentIntentPayload[]> {
-  // TODO: Implement using near-api-js in production.
-  const open = intentStore.filter((i) => !i.fulfilled);
-  console.log(`[STUB] Fetching open NEAR intents: ${open.length} pending`);
-  return open.map(({ fulfilled: _f, payoutTxHash: _p, ...rest }) => rest);
+  if (!nearAccount || !nearConfig.privateKey) {
+    const open = intentStore.filter((i) => !i.fulfilled);
+    console.log(`[STUB] Fetching open NEAR intents: ${open.length} pending`);
+    return open.map(({ fulfilled: _f, payoutTxHash: _p, ...rest }) => rest);
+  }
+
+  const result = await nearAccount.viewFunction({
+    contractId: nearConfig.contractId,
+    methodName: "list_open_intents",
+    args: {},
+  });
+
+  return result as PaymentIntentPayload[];
 }
 
 /**
@@ -68,25 +130,45 @@ export async function markNearIntentFulfilled(
   id: string,
   payoutTxHash: string
 ): Promise<void> {
-  // TODO: Implement using near-api-js in production.
-  const target = intentStore.find((i) => i.id === id);
-  if (target) {
-    target.fulfilled = true;
-    target.payoutTxHash = payoutTxHash;
+  if (!nearAccount || !nearConfig.privateKey) {
+    const target = intentStore.find((i) => i.id === id);
+    if (target) {
+      target.fulfilled = true;
+      target.payoutTxHash = payoutTxHash;
+    }
+
+    console.log(`[STUB] Marking NEAR intent fulfilled:`, {
+      intentId: id,
+      payoutTxHash,
+    });
+    return;
   }
 
-  console.log(`[STUB] Marking NEAR intent fulfilled:`, {
-    intentId: id,
-    payoutTxHash,
+  await nearAccount.functionCall({
+    contractId: nearConfig.contractId,
+    methodName: "mark_fulfilled",
+    args: { id, payout_tx_hash: payoutTxHash },
+    gas: new utils.format.Gas("30000000000000"), // 30 Tgas
   });
+
+  console.log(`[NEAR] Intent ${id} marked fulfilled on-chain`);
 }
 
 /**
  * Get intent details by ID
  */
 export async function getNearIntent(id: string): Promise<NearIntentResponse | null> {
-  // TODO: Implement using near-api-js in production.
-  console.log(`[STUB] Getting NEAR intent: ${id}`);
-  const intent = intentStore.find((i) => i.id === id);
-  return intent ? { ...intent } : null;
+  if (!nearAccount || !nearConfig.privateKey) {
+    console.log(`[STUB] Getting NEAR intent: ${id}`);
+    const intent = intentStore.find((i) => i.id === id);
+    return intent ? { ...intent } : null;
+  }
+
+  const intent = await nearAccount.viewFunction({
+    contractId: nearConfig.contractId,
+    methodName: "get_intent",
+    args: { id },
+  });
+
+  return intent as NearIntentResponse;
 }

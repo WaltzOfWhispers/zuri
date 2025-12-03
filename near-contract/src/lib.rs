@@ -10,7 +10,8 @@ pub struct PaymentIntent {
     pub dest_chain: String,      // e.g. "ethereum-sepolia"
     pub dest_asset: String,      // e.g. "ETH"
     pub dest_address: String,    // Recipient address on destination chain
-    pub amount_wei: u128,        // Amount denominated in wei for ETH
+    pub amount_atomic: u128,     // Amount denominated in smallest unit for the asset
+    pub decimals: u8,            // Decimal places for dest_asset
     pub zcash_burn_txid: String, // Optional ZEC burn reference
     pub created_at: u64,         // Milliseconds since epoch
     pub fulfilled: bool,         // Whether solver paid out
@@ -21,18 +22,34 @@ pub struct PaymentIntent {
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
     intents: Vec<PaymentIntent>,
+    owner: String,
 }
 
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new() -> Self {
-        Self { intents: Vec::new() }
+    pub fn new(owner: String) -> Self {
+        Self {
+            intents: Vec::new(),
+            owner,
+        }
+    }
+
+    fn assert_owner(&self) {
+        let caller = env::predecessor_account_id();
+        assert_eq!(
+            caller,
+            self.owner,
+            "Only the owner can call this method (caller: {}, owner: {})",
+            caller,
+            self.owner
+        );
     }
 
     /// Create a new intent. In a production setting we would add access control
     /// to ensure only the orchestrator account can post intents.
     pub fn create_intent(&mut self, intent: PaymentIntent) {
+        self.assert_owner();
         self.intents.push(intent);
         env::log_str("intent created");
     }
@@ -48,6 +65,7 @@ impl Contract {
 
     /// Mark an intent fulfilled with the payout tx hash.
     pub fn mark_fulfilled(&mut self, id: String, payout_tx_hash: String) {
+        self.assert_owner();
         for intent in &mut self.intents {
             if intent.id == id {
                 intent.fulfilled = true;
@@ -71,10 +89,12 @@ mod tests {
     use near_sdk::test_utils::VMContextBuilder;
     use near_sdk::testing_env;
 
-    fn setup() -> Contract {
-        let context = VMContextBuilder::new().build();
+    fn setup(owner: &str) -> Contract {
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(owner.parse().unwrap())
+            .build();
         testing_env!(context);
-        Contract::new()
+        Contract::new(owner.to_string())
     }
 
     fn sample_intent(id: &str) -> PaymentIntent {
@@ -84,7 +104,8 @@ mod tests {
             dest_chain: "ethereum-sepolia".to_string(),
             dest_asset: "ETH".to_string(),
             dest_address: "0xBob".to_string(),
-            amount_wei: 1000,
+            amount_atomic: 1000,
+            decimals: 18,
             zcash_burn_txid: "burn123".to_string(),
             created_at: 1,
             fulfilled: false,
@@ -94,7 +115,7 @@ mod tests {
 
     #[test]
     fn create_and_list_intent() {
-        let mut contract = setup();
+        let mut contract = setup("alice.testnet");
         contract.create_intent(sample_intent("intent-1"));
 
         let open = contract.list_open_intents();
@@ -104,7 +125,7 @@ mod tests {
 
     #[test]
     fn mark_intent_fulfilled() {
-        let mut contract = setup();
+        let mut contract = setup("alice.testnet");
         contract.create_intent(sample_intent("intent-1"));
 
         contract.mark_fulfilled("intent-1".to_string(), "payout-hash".to_string());

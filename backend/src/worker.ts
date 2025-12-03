@@ -67,7 +67,8 @@ export async function processPayment(payment: Payment): Promise<void> {
         destChain: "ethereum-sepolia",
         destAsset: "ETH",
         destAddress: payment.recipient,
-        amountWei: ethers.parseEther(payment.amountEth).toString(),
+        amountAtomic: ethers.parseEther(payment.amountEth).toString(),
+        decimals: 18,
         zcashBurnTxid: payment.zcashBurnTxId!,
         createdAt: Date.now(),
       });

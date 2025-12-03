@@ -24,7 +24,7 @@ export async function startSolver(intervalMs: number = 10000): Promise<void> {
         );
 
         // Interpret amountWei as atomic units; convert to human-readable for logging
-        const amountZec = ethers.formatEther(intent.amountWei);
+        const amountZec = ethers.formatEther(intent.amountAtomic);
 
         // Send shielded payout (stub)
         const payout = await sendShieldedPayout(intent.destAddress, amountZec);
