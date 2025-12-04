@@ -2,7 +2,7 @@
 
 Zuri: Private cross-chain payouts powered by Zcash — fund from any chain, pay to any chain, stay unlinked.
 
-Zuri is a lightweight cross-chain payment router that lets users fund a payment on any chain and deliver it privately to Solana or another chain like ETH,  without revealing the sender or linking the source to the destination. Users never hold or see ZEC. Instead, Zuri maintains its own shielded Zcash balance, periodically funding in the backend to preserve a strong anonymity set while providing a simple, familiar “Send Privately” UX.
+Zuri is a lightweight cross-chain settlement layer that lets users fund a payment on any chain and deliver it privately to Solana or another chain like ETH,  without revealing the sender or linking the source to the destination. Users never hold or see ZEC. Instead, Zuri maintains its own shielded Zcash balance, periodically funding in the backend to preserve a strong anonymity set while providing a simple, familiar “Send Privately” UX.
 
 Zuri demonstrates how Zcash can serve as the core privacy rail of a multichain world, solving a foundational problem in crypto: private cross-chain value transfer that feels as simple as sending a normal transaction.
 
