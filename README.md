@@ -1,11 +1,38 @@
 # Zuri — Private, Cross‑Chain Settlement (Zypherpunk Hackathon)
 
-Zuri lets anyone fund on one rail (ETH Sepolia or SOL devnet) and deliver privately to another (ETH or SOL) without exposing the path. Intents live on NEAR, privacy layer is enabled by ZCash.
+Zuri: Private cross-chain payouts powered by Zcash — fund from any chain, pay to any chain, stay unlinked.
 
-## Why it fits Zypherpunk
-- **Privacy-first**: Users never see the rails (NEAR/ZEC); only source/dest are exposed.
-- **Cross‑chain**: ETH ↔ SOL today; intent infra is chain-agnostic.
-- **Hackable**: Mock solver + stubbed ZEC lets you demo end-to-end fast; swap stubs for real rails post-hackathon.
+Zuri is a lightweight cross-chain payment router that lets users fund a payment on any chain and deliver it privately to Solana or another chain like ETH,  without revealing the sender or linking the source to the destination. Users never hold or see ZEC. Instead, Zuri maintains its own shielded Zcash balance, periodically funding in the backend to preserve a strong anonymity set while providing a simple, familiar “Send Privately” UX.
+
+Zuri demonstrates how Zcash can serve as the core privacy rail of a multichain world, solving a foundational problem in crypto: private cross-chain value transfer that feels as simple as sending a normal transaction.
+
+## How Zuri Works
+
+User funds with any asset (e.g., SOL or ETH on Sepolia or Solana devnet).
+
+Zuri receives the user funding on the originating chain while paying out to the destination chain via ZEC shielded transfers.
+
+A NEAR intent encodes the payout request in a verifiable, chain-agnostic format.
+
+Zuri’s solver executes a private payout on the destination chain (e.g., USDC on Solana Devnet) with no visible connection to the original funder.
+
+To the user, this all appears as a single action:
+
+“Send Privately” — from any chain to any chain.
+
+## Why Zuri Matters
+
+Bridges and cross-chain routers expose sender→recipient linkages. Zuri instead uses Zcash’s shielded pool as a periodically replenished privacy substrate, enabling unlinkable private payouts to Solana without requiring users to touch ZEC or manage extra wallets.
+
+This unlocks:
+
+- Private Solana-bound remittances
+
+- ZEC-backed privacy for any-chain → Solana transfers
+
+- Clean infrastructure for apps needing private cross-chain settlement
+
+Zuri shows how Zcash can serve as an invisible, renewable privacy backbone for Solana-focused applications.
 
 ## Architecture
 - **Frontend**: React/Vite/TS, WalletConnect (EVM), Phantom (Solana). Single-page form + timeline.
@@ -59,7 +86,7 @@ Frontend `.env`:
 
 ## Shipped vs Stubbed
 - ✅ ETH & SOL funding, verification, NEAR intents, explorer links, mock solver.
-- ⏳ USDC pay-in, real Zcash burns, production solver payouts (interfaces ready).
+- ⏳ USDC pay-in, real Zcash shielded transfers, production solver payouts (interfaces ready).
 
 ## Troubleshooting
 - Stuck at CREATED: funding tx hash not attached (send failed or attach didn’t fire); attach manually via API.
