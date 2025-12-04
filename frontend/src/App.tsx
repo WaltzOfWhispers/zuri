@@ -146,8 +146,19 @@ function App() {
   const handleSubmit = async ({ recipient, amount, asset, payAsset }: SendFormValues) => {
     setError(null);
 
-    if (!walletAddress && !wcProvider && !solWallet) {
-      setError("Connect a wallet before sending.");
+    // Enforce the right wallet type for the chosen pay asset
+    if (payAsset === "ETH") {
+      if (!walletAddress && !wcProvider) {
+        setError("Connect an EVM wallet (WalletConnect) before sending ETH.");
+        return;
+      }
+    } else if (payAsset === "SOL") {
+      if (!solWallet) {
+        setError("Connect a Solana wallet (Phantom) before sending SOL.");
+        return;
+      }
+    } else {
+      setError("USDC funding will be supported in a future release. Please use SOL or ETH for now.");
       return;
     }
 
