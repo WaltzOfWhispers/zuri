@@ -14,7 +14,7 @@ Zuri receives the user funding on the originating chain while paying out to the 
 
 A NEAR intent encodes the payout request in a verifiable, chain-agnostic format.
 
-Zuri’s solver executes a private payout on the destination chain (e.g., USDC on Solana Devnet) with no visible connection to the original funder.
+Zuri’s solver (or other solvers) execute the payouts on the destination chain (e.g., USDC on Solana Devnet) with no visible connection to the original funder.
 
 To the user, this all appears as a single action:
 
