@@ -1,3 +1,5 @@
+![Zuri send flow screenshot showing unified Solana pay-in and payout UX](frontend/public/zuri-ui.jpeg)
+
 # Zuri — Private, Cross‑Chain Settlement (Zypherpunk Hackathon)
 
 Zuri: Private cross-chain payouts powered by Zcash — fund from any chain, pay to any chain, stay unlinked.
